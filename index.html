@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>input</title>
+</head>
+
+<body>
+
+  <input type="text" data-native-type="date" placeholder="Date">
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+
+      // Кэш поддерживаемых input-типов
+      const supportedTypesCache = Object.create(null);
+
+      // Проверка поддержки input[type=]
+      function isInputTypeSupported(type) {
+        if (type in supportedTypesCache) return supportedTypesCache[type];
+
+        const testInput = document.createElement('input');
+        let isSupported = false;
+        try {
+          testInput.setAttribute('type', type);
+          isSupported = testInput.type === type;
+        } catch (e) {
+          isSupported = false;
+        }
+        supportedTypesCache[type] = isSupported;
+        return isSupported;
+      }
+
+      // Prefetch на mouseenter/touchstart
+      document.addEventListener('mouseover', prefetchInputType, { passive: true });
+      document.addEventListener('touchstart', prefetchInputType, { passive: true });
+
+      function prefetchInputType(event) {
+        const input = event.target.closest?.('input[data-native-type]');
+        if (!input) return;
+        const type = input.dataset.nativeType;
+        if (type && !(type in supportedTypesCache)) {
+          isInputTypeSupported(type);
+        }
+      }
+
+      // Замена типа на focusin
+      document.addEventListener('focusin', (event) => {
+        const input = event.target;
+
+        if (
+          input.tagName !== 'INPUT' ||
+          !input.dataset.nativeType ||
+          input.type === input.dataset.nativeType
+        ) return;
+
+        const newType = input.dataset.nativeType;
+
+        // Проверка поддержки (из кэша или с проверкой)
+        if (!isInputTypeSupported(newType)) return;
+
+        if (!input.dataset.originalType) {
+          input.dataset.originalType = input.type;
+        }
+
+        input.type = newType;
+
+        if (input.dataset.keepNative !== "true") {
+          const restoreType = () => {
+            input.type = input.dataset.originalType || "text";
+            input.removeEventListener("blur", restoreType);
+          };
+          input.addEventListener("blur", restoreType);
+        }
+      });
+
+
+    })
+  </script>
+</body>
+
+</html>
